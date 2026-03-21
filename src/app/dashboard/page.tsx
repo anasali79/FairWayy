@@ -1,0 +1,301 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import type { Charity, Draw, DrawWinner as DW, ScoreEntry, Subscription, WinnerSubmission } from "@/types/domain";
+import {
+  createSubscriptionInactiveForStripe,
+  getCharities,
+  getDraws,
+  getDrawWinners,
+  purchaseSubscriptionMock,
+  getScoresByUserId,
+  getSubscriptionByUserId,
+  getWinnerSubmissions,
+} from "@/lib/supabase/db";
+import { DEFAULT_CURRENCY, PLAN_PRICES_CENTS } from "@/lib/pricing";
+
+function fmtISODate(isoDate: string) {
+  const d = new Date(isoDate + "T00:00:00");
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function firstNameFromEmail(email: string) {
+  const base = email.split("@")[0]?.trim();
+  if (!base) return "Alex";
+  const first = base.split(/[._-]/)[0];
+  return first ? first[0].toUpperCase() + first.slice(1) : "Alex";
+}
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const { user, loading, refresh } = useAuth();
+
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [charities, setCharities] = useState<Charity[]>([]);
+  const [scores, setScores] = useState<ScoreEntry[]>([]);
+  const [draws, setDraws] = useState<Draw[]>([]);
+  const [drawWinners, setDrawWinners] = useState<DW[]>([]);
+  const [winnerSubmissions, setWinnerSubmissions] = useState<WinnerSubmission[]>([]);
+  const [activatingPlan, setActivatingPlan] = useState<"monthly" | "yearly" | null>(null);
+  const stripeMode = process.env.NEXT_PUBLIC_STRIPE_MODE ?? "mock";
+
+  const totalCharityPct = useMemo(() => {
+    if (!user) return 0;
+    return user.charityPct + user.donationPctExtra;
+  }, [user]);
+
+  useEffect(() => {
+    getCharities()
+      .then(setCharities)
+      .catch(() => {
+        setCharities([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const [sub, userScores, userDraws, userWinners, verifications] = await Promise.all([
+        getSubscriptionByUserId(user.id),
+        getScoresByUserId(user.id),
+        getDraws(),
+        getDrawWinners(),
+        getWinnerSubmissions(),
+      ]);
+      setSubscription(sub);
+      setScores(userScores.sort((a, b) => b.scoreDateISO.localeCompare(a.scoreDateISO)));
+      setDraws(userDraws);
+      setDrawWinners(userWinners);
+      setWinnerSubmissions(verifications);
+    })();
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 py-10">
+        <div className="text-sm text-zinc-600 dark:text-zinc-300">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 py-10">
+        <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">Sign in required</h1>
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+          Please login to manage your subscription and scores.
+        </p>
+        <button
+          onClick={() => router.push("/auth/login")}
+          className="mt-5 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white hover:bg-black/90 dark:bg-white dark:text-black"
+        >
+          Go to login
+        </button>
+      </div>
+    );
+  }
+
+  const selectedCharity = charities.find((c) => c.id === user.charityId) ?? null;
+  const publishedDraws = draws.filter((d) => d.status === "published").sort((a, b) => b.monthISO.localeCompare(a.monthISO));
+  const myWinnerRows = drawWinners.filter((w) => w.userId === user.id).length;
+  const paidWinnerSubmissions = winnerSubmissions.filter(
+    (s) => s.userId === user.id && s.paymentStatus === "paid" && typeof s.payoutCents === "number",
+  );
+  const totalWonCents = paidWinnerSubmissions.reduce((sum, s) => sum + (s.payoutCents ?? 0), 0);
+  const recentScores = scores.slice(0, 5);
+  const lastWinDate = paidWinnerSubmissions[0]?.createdAtISO;
+  const monthlyGoal = 100;
+  const donatedAmount = Math.round((subscription?.priceCents ?? 0) * (totalCharityPct / 100)) / 100;
+  const impactPct = Math.min(100, Math.round((donatedAmount / monthlyGoal) * 100));
+  const displayName = firstNameFromEmail(user.email);
+  const isSubscriptionActive = subscription?.status === "active";
+  const activatePlan = async (plan: "monthly" | "yearly") => {
+    setActivatingPlan(plan);
+    const now = new Date();
+    const renewal = new Date(now);
+    renewal.setMonth(now.getMonth() + (plan === "monthly" ? 1 : 12));
+    const renewalISO = renewal.toISOString().slice(0, 10);
+
+    try {
+      if (stripeMode === "real") {
+        await createSubscriptionInactiveForStripe({
+          userId: user.id,
+          plan,
+          priceCents: PLAN_PRICES_CENTS[plan],
+          currency: DEFAULT_CURRENCY,
+          renewalISODate: renewalISO,
+        });
+
+        const resp = await fetch("/api/stripe/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            plan,
+            userId: user.id,
+            email: user.email,
+          }),
+        });
+
+        const data = (await resp.json()) as { url?: string; error?: string };
+        if (!resp.ok || !data.url) {
+          throw new Error(data.error ?? "Failed to create checkout session.");
+        }
+        window.location.href = data.url;
+        return;
+      }
+
+      await purchaseSubscriptionMock({
+        userId: user.id,
+        plan,
+        priceCents: PLAN_PRICES_CENTS[plan],
+        currency: DEFAULT_CURRENCY,
+        renewalISODate: renewalISO,
+      });
+      setSubscription(await getSubscriptionByUserId(user.id));
+    } finally {
+      setActivatingPlan(null);
+    }
+  };
+
+  return (
+    <div className="mx-auto w-full max-w-6xl px-6 py-10">
+      <h1 className="text-6xl font-semibold tracking-tight text-zinc-900">Welcome back, {displayName}.</h1>
+      <p className="mt-3 max-w-3xl text-lg text-zinc-600">
+        Your Impact today is supporting the {selectedCharity?.name ?? "Green Fields Initiative"}. You&apos;re currently in the top 5% of monthly contributors.
+      </p>
+
+      <section className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <article className="rounded-lg border border-zinc-200 bg-white p-6">
+          <p className="text-[11px] font-semibold tracking-[0.22em] text-zinc-500">SUBSCRIPTION</p>
+          <p className="mt-2 text-4xl font-semibold text-zinc-900">• {subscription?.status ? subscription.status[0].toUpperCase() + subscription.status.slice(1) : "Inactive"}</p>
+          <p className="mt-2 text-sm text-zinc-500">Renews {subscription ? fmtISODate(subscription.renewalISODate) : "N/A"}</p>
+          {!isSubscriptionActive ? (
+            <div className="mt-4 flex gap-2">
+              <button
+                disabled={activatingPlan !== null}
+                onClick={() => activatePlan("monthly")}
+                className="rounded-lg bg-zinc-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
+              >
+                {activatingPlan === "monthly" ? "Activating..." : "Activate Monthly"}
+              </button>
+              <button
+                disabled={activatingPlan !== null}
+                onClick={() => activatePlan("yearly")}
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 disabled:opacity-60"
+              >
+                {activatingPlan === "yearly" ? "Activating..." : "Activate Yearly"}
+              </button>
+            </div>
+          ) : null}
+        </article>
+        <article className="rounded-lg border border-zinc-200 bg-white p-6 hover:scale-105 transition-transform duration-300 cursor-pointer" onClick={() => router.push("/draw-results")}>
+          <p className="text-[11px] font-semibold tracking-[0.22em] text-zinc-500">DRAWS ENTERED</p>
+          <p className="mt-2 text-6xl font-semibold leading-none text-indigo-600">{publishedDraws.length}</p>
+          <p className="mt-2 text-sm text-zinc-500">{publishedDraws.length} active entries</p>
+        </article>
+        <article className="rounded-lg border border-zinc-200 bg-white p-6">
+          <p className="text-[11px] font-semibold tracking-[0.22em] text-zinc-500">TOTAL WINNINGS</p>
+          <p className="mt-2 text-6xl font-semibold leading-none text-zinc-900">₹{Math.round(totalWonCents / 100)}</p>
+          <p className="mt-2 text-sm text-zinc-500">Last win: {lastWinDate ? fmtISODate(lastWinDate.slice(0, 10)) : "N/A"}</p>
+        </article>
+        <article className="rounded-lg border border-zinc-200 bg-white p-6">
+          <p className="text-[11px] font-semibold tracking-[0.22em] text-zinc-500">TOTAL DONATED</p>
+          <p className="mt-2 text-6xl font-semibold leading-none text-teal-700">₹{Math.round(donatedAmount)}</p>
+          <p className="mt-2 text-sm text-zinc-500">{myWinnerRows} wins verified</p>
+        </article>
+      </section>
+
+      <section className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
+        <article className="rounded-lg border border-zinc-200 bg-white p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-5xl font-semibold tracking-tight text-zinc-900">Score Performance</h2>
+              <p className="mt-2 text-lg text-zinc-600">Your last 5 rounds at Pebble Beach</p>
+            </div>
+            <span className="rounded-full bg-zinc-100 px-3 py-1 text-sm text-zinc-700">
+              Handicap: {recentScores.length ? (recentScores.reduce((sum, s) => sum + s.stableford, 0) / recentScores.length / 4).toFixed(1) : "8.2"}
+            </span>
+          </div>
+          <div className="mt-20 grid grid-cols-5 px-10 text-center text-lg text-zinc-700">
+            {(recentScores.length ? recentScores.map((s) => s.stableford).reverse() : [72, 78, 71, 82, 74]).map((score, idx) => (
+              <div key={`${score}-${idx}`}>{score}</div>
+            ))}
+          </div>
+        </article>
+
+        <article className="rounded-lg border border-zinc-200 bg-white p-6">
+          <h3 className="text-5xl font-semibold tracking-tight text-zinc-900">Monthly Impact</h3>
+          <p className="mt-3 text-lg text-zinc-700">You are raising funds for {selectedCharity?.name ?? "your selected charity"}.</p>
+          <p className="mt-8 text-[11px] font-semibold tracking-[0.2em] text-zinc-500">MONTHLY GOAL</p>
+          <p className="mt-2 text-right text-4xl font-semibold text-zinc-900">${Math.round(donatedAmount)} / ${monthlyGoal}</p>
+          <div className="mt-3 h-3 rounded-full bg-zinc-100">
+            <div className="h-3 rounded-full bg-teal-700" style={{ width: `${impactPct}%` }} />
+          </div>
+          <p className="mt-2 text-sm text-zinc-500">{impactPct}% goal reached this cycle</p>
+        </article>
+      </section>
+
+      <section className="mt-8 rounded-lg border border-zinc-200 bg-white p-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-5xl font-semibold tracking-tight text-zinc-900">Draw History</h2>
+          <button onClick={() => router.push("/winnings")} className="text-base font-semibold text-indigo-600">
+            View All Records
+          </button>
+        </div>
+        <div className="mt-6 overflow-hidden rounded-lg border border-zinc-200">
+          <table className="w-full text-left">
+            <thead className="bg-zinc-50 text-[11px] font-semibold tracking-[0.2em] text-zinc-500">
+              <tr>
+                <th className="px-5 py-3">DRAW EVENT</th>
+                <th className="px-5 py-3">ENTRY DATE</th>
+                <th className="px-5 py-3">POT VALUE</th>
+                <th className="px-5 py-3">STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {publishedDraws.slice(0, 5).map((d, idx) => ({
+                id: d.id,
+                name: `Monthly ${d.drawType}-Match`,
+                date: fmtISODate(d.monthISO),
+                pot: `$${(d.jackpotRolloverCents ? Math.round(d.jackpotRolloverCents / 100) : 5000 + idx * 1500).toLocaleString()}`,
+                status: idx === 0 ? "Entered" : idx === 1 ? "Winner" : "Ended",
+              })).map((row) => (
+                <tr key={row.id} className="border-t border-zinc-200 text-lg">
+                  <td className="px-5 py-4 font-medium text-zinc-800">{row.name}</td>
+                  <td className="px-5 py-4 text-zinc-600">{row.date}</td>
+                  <td className="px-5 py-4 font-medium text-zinc-800">{row.pot}</td>
+                  <td className="px-5 py-4">
+                    <span
+                      className={
+                        row.status === "Winner"
+                          ? "rounded-full bg-teal-100 px-3 py-1 text-sm font-semibold text-teal-700"
+                          : row.status === "Entered"
+                            ? "rounded-full bg-indigo-100 px-3 py-1 text-sm font-semibold text-indigo-700"
+                            : "rounded-full bg-zinc-200 px-3 py-1 text-sm font-semibold text-zinc-700"
+                      }
+                    >
+                      {row.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {publishedDraws.length === 0 ? (
+                <tr className="border-t border-zinc-200 text-lg">
+                  <td className="px-5 py-4 text-zinc-600" colSpan={4}>No published draw records yet.</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
+}
+
