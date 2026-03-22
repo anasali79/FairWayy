@@ -144,7 +144,7 @@ export default function WinningsPage() {
                             </div>
                             
                             <h2 className="text-2xl font-black tracking-tight text-zinc-900 sm:text-3xl md:text-4xl">
-                                {sub.payoutCents ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(sub.payoutCents / 100) : "Reward Pending Calculation"}
+                                {sub.payoutCents ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(sub.payoutCents / 100) : "Reward Pending Calculation"}
                             </h2>
                             
                             <p className="max-w-sm text-sm font-medium text-zinc-400">

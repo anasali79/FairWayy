@@ -24,9 +24,9 @@ export default function Home() {
   }, []);
 
   const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat("en-IN", {
+    return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "INR",
+      currency: "USD",
       maximumFractionDigits: 0,
     }).format(cents / 100);
   };

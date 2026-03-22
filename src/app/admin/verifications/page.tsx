@@ -69,8 +69,8 @@ export default function WinnerVerificationPage() {
     .filter(s => s.paymentStatus === "paid")
     .reduce((acc, s) => acc + (s.payoutCents ?? 0), 0);
 
-  const formatINR = (cents: number) =>
-    new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(cents / 100);
+  const formatUSD = (cents: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(cents / 100);
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] pb-16 pt-6 font-sans sm:pb-20 sm:pt-10">
@@ -130,7 +130,7 @@ export default function WinnerVerificationPage() {
                 </div>
                 <div>
                     <p className="text-[10px] font-black tracking-[0.1em] text-[#006d5c] uppercase">Total Disbursed</p>
-                    <p className="text-xl font-black tabular-nums text-zinc-900 sm:text-2xl">{formatINR(totalDisbursed)}</p>
+                    <p className="text-xl font-black tabular-nums text-zinc-900 sm:text-2xl">{formatUSD(totalDisbursed)}</p>
                 </div>
             </div>
           </div>

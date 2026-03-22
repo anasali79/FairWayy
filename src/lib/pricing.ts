@@ -1,4 +1,4 @@
-export const DEFAULT_CURRENCY = "INR";
+export const DEFAULT_CURRENCY = "USD";
 
 // Mock pricing (edit as needed). Stripe integration will replace these.
 export const PLAN_PRICES_CENTS: Record<"monthly" | "yearly", number> = {

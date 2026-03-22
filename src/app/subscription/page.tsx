@@ -7,7 +7,7 @@ export const metadata = {
 };
 
 function formatPrice(cents: number) {
-  return new Intl.NumberFormat("en-IN", {
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: DEFAULT_CURRENCY,
     maximumFractionDigits: 0,

@@ -32,7 +32,7 @@ create table if not exists public.golf_subscriptions (
   status text not null check (status in ('active', 'inactive', 'past_due', 'cancelled')),
   renewal_date date not null,
   price_cents integer not null check (price_cents >= 0),
-  currency text not null default 'INR',
+  currency text not null default 'USD',
   stripe_customer_id text,
   stripe_subscription_id text,
   created_at timestamptz not null default now(),
