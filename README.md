@@ -28,6 +28,9 @@ Open `http://localhost:3000` with your browser.
 ### Accounts
 - **Subscriber**: `/auth/signup` (or `/subscription` → plans).
 - **Admin**: create a user in Supabase, set `golf_profiles.role = 'admin'`, or use `/auth/admin-signup` if configured.
+- Admin id and pass
+-   Email---rekiriy134@isfew.com
+-   Pass--- 123456
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) for font optimization.
 
