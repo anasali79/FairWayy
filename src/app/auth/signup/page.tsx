@@ -49,6 +49,13 @@ export default function SignupPage() {
       .catch(() => setCharities(seedCharities));
   }, []);
 
+  // Pre-select plan from /subscription?plan=monthly|yearly (public pricing page)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const p = new URLSearchParams(window.location.search).get("plan");
+    if (p === "yearly" || p === "monthly") setPlan(p);
+  }, []);
+
   useEffect(() => {
     if (selectedCharityId) return;
     const featured = charities.find((c) => c.featured);
@@ -114,12 +121,12 @@ export default function SignupPage() {
               setError(res.error);
               return;
             }
-            
-            // If userId is returned, it might mean confirmation is OFF.
-            // If userId is empty string, it definitely means confirmation is ON.
+
+            // Email verification pending: no session yet (AuthContext returns userId "").
+            // Do not call subscription/Stripe — would fail RLS and show "Signup failed".
             if (res.userId === "") {
-                setSuccess(true);
-                return;
+              setSuccess(true);
+              return;
             }
 
             const now = new Date();

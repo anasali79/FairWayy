@@ -1,13 +1,101 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { getDraws, runDrawSupabase } from "@/lib/supabase/db";
 import type { Draw, DrawMode, DrawType } from "@/types/domain";
-import { PLAN_PRICES_CENTS } from "@/lib/pricing";
+import { DRAW_TIER_SHARE, PLAN_PRICES_CENTS, PRIZE_POOL_CONTRIBUTION_PCT } from "@/lib/pricing";
 
 const currentMonthISO = () => new Date().toISOString().slice(0, 7) + "-01";
+
+function PublicDrawMechanicsOverview() {
+  return (
+    <div className="min-h-screen bg-[#f8f9fa] pb-24 pt-10 sm:pt-14 md:pt-16">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
+        <p className="text-[10px] font-black uppercase tracking-[0.35em] text-[#4c49ed]">For everyone</p>
+        <h1 className="mt-3 text-3xl font-black leading-tight tracking-tighter text-zinc-900 sm:text-4xl md:text-5xl">
+          How the <span className="text-[#4c49ed]">draw</span> works
+        </h1>
+        <p className="mt-4 text-base font-medium leading-relaxed text-zinc-500 sm:text-lg">
+          A short overview of Fairway Impact draws — no account needed to read this. Subscribers enter scores; admins run and publish official results.
+        </p>
+
+        <ol className="mt-10 space-y-6">
+          {[
+            {
+              step: "1",
+              title: "Subscribe & pick a charity",
+              body: "Your membership supports listed charities. A portion of subscriptions feeds the prize pool (illustrative share used in the app: about " + PRIZE_POOL_CONTRIBUTION_PCT + "%).",
+            },
+            {
+              step: "2",
+              title: "Play & log Stableford scores",
+              body: "You add your recent rounds in My Scores. Those Stableford numbers are what the draw compares against when results are published.",
+            },
+            {
+              step: "3",
+              title: "Monthly draw & winning numbers",
+              body: "Each cycle, a set of winning numbers is generated and published (fairness rules and modes are configured by administrators). Everyone can see published results on Draw Results once logged in.",
+            },
+            {
+              step: "4",
+              title: "Matching tiers",
+              body: `Your scores are checked against the published sequence. More matches mean a higher tier (e.g. 3-, 4-, or 5-match). Prize pool splits across tiers — example tier shares in the product: ${Math.round(DRAW_TIER_SHARE["5-match"] * 100)}% / ${Math.round(DRAW_TIER_SHARE["4-match"] * 100)}% / ${Math.round(DRAW_TIER_SHARE["3-match"] * 100)}% for top tiers (configurable).`,
+            },
+            {
+              step: "5",
+              title: "Verification & payout",
+              body: "If you’re due a prize, you’ll use Winnings to submit proof; admins verify and mark payout status. This keeps the process transparent end-to-end.",
+            },
+          ].map((item) => (
+            <li
+              key={item.step}
+              className="flex gap-4 rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm sm:gap-5 sm:rounded-3xl sm:p-6"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-sm font-black text-[#4c49ed]">
+                {item.step}
+              </span>
+              <div>
+                <h2 className="text-lg font-black tracking-tight text-zinc-900">{item.title}</h2>
+                <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-600">{item.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+
+        <div className="mt-10 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-6 sm:rounded-3xl sm:p-8">
+          <p className="text-sm font-bold text-zinc-800">Admin-only tools</p>
+          <p className="mt-2 text-sm font-medium text-zinc-600">
+            Running simulations, publishing draws, and full engine controls stay on this same URL for administrators after sign-in.
+          </p>
+        </div>
+
+        <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <Link
+            href="/subscription"
+            className="inline-flex items-center justify-center rounded-2xl bg-[#4c49ed] px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-indigo-100 transition hover:bg-indigo-700"
+          >
+            View subscription plans
+          </Link>
+          <Link
+            href="/auth/login"
+            className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-zinc-800 transition hover:bg-zinc-50"
+          >
+            Sign in for scores & results
+          </Link>
+          <Link
+            href="/charities"
+            className="inline-flex items-center justify-center rounded-2xl border border-transparent px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-[#4c49ed] hover:underline"
+          >
+            Explore charities
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function DrawMechanicsPage() {
   const { user, loading } = useAuth();
@@ -26,23 +114,21 @@ export default function DrawMechanicsPage() {
   const [winningNumbers, setWinningNumbers] = useState<number[]>([]);
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== "admin")) {
-      router.push("/auth/login");
-      return;
-    }
-    getDraws().then((d) => setDraws(d.sort((a,b) => b.monthISO.localeCompare(a.monthISO))));
+    if (loading || user?.role !== "admin") return;
+    getDraws().then((d) => setDraws(d.sort((a, b) => b.monthISO.localeCompare(a.monthISO))));
   }, [user, loading]);
 
-  const generateAlgorithmNumbers = () => {
-    const nums: number[] = [];
-    while(nums.length < drawType) {
-        const n = Math.floor(Math.random() * 45) + 1;
-        if(!nums.includes(n)) nums.push(n);
-    }
-    return nums.sort((a,b) => a - b);
-  };
+  if (loading) {
+    return (
+      <div className="p-20 text-center text-xs font-black uppercase tracking-widest text-[#4c49ed] animate-pulse">
+        Loading…
+      </div>
+    );
+  }
 
-  if (loading || !user) return <div className="p-20 text-center font-black animate-pulse text-[#4c49ed] tracking-widest uppercase text-xs">Initializing Secure Engine...</div>;
+  if (user?.role !== "admin") {
+    return <PublicDrawMechanicsOverview />;
+  }
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] pt-12 pb-32">
@@ -177,7 +263,7 @@ export default function DrawMechanicsPage() {
                       </div>
                       <div className="space-y-4">
                            <p className="text-[10px] font-black text-rose-400 uppercase tracking-[0.2em] border-b border-rose-900/50 pb-3">Liquidity Estimate</p>
-                           <p className="text-4xl font-black mt-2 text-rose-500 leading-none">₹{ready ? (simWinners.reduce((acc, w) => acc + (w.prizeAmountCents || 0), 0) / 100).toLocaleString() : '0'}</p>
+                           <p className="text-4xl font-black mt-2 text-rose-500 leading-none">${ready ? (simWinners.reduce((acc, w) => acc + (w.prizeAmountCents || 0), 0) / 100).toLocaleString() : '0'}</p>
                            <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">Total Distribution</p>
                       </div>
                   </div>
@@ -199,7 +285,7 @@ export default function DrawMechanicsPage() {
                                           </div>
                                       </div>
                                       <div className="text-right">
-                                          <p className="text-sm font-black text-emerald-400 tabular-nums">₹{((w.prizeAmountCents || 0) / 100).toLocaleString()}</p>
+                                          <p className="text-sm font-black text-emerald-400 tabular-nums">${((w.prizeAmountCents || 0) / 100).toLocaleString()}</p>
                                           <p className="text-[9px] font-bold text-zinc-600 uppercase mt-1">Calculated Share</p>
                                       </div>
                                   </div>

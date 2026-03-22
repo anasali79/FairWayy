@@ -23,6 +23,11 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Close mobile menu on navigation (new page opened)
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const closeMenu = () => setMenuOpen(false);
 
@@ -55,6 +60,7 @@ export function Navbar() {
           <Link
             href="/"
             className="flex items-center gap-3 group"
+            onClick={closeMenu}
           >
             <div className="h-10 w-10 flex items-center justify-center rounded-2xl bg-indigo-600 shadow-xl shadow-indigo-200 group-hover:scale-110 transition-transform">
               <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
@@ -73,7 +79,7 @@ export function Navbar() {
                 <Link href="/" className={linkClass("/")} onClick={closeMenu}>Home</Link>
                 <Link href="/charities" className={linkClass("/charities")} onClick={closeMenu}>Charities</Link>
                 <Link href="/draw-mechanics" className={linkClass("/draw-mechanics")} onClick={closeMenu}>Draw Mechanics</Link>
-                <Link href="/auth/signup" className={linkClass("/auth/signup")} onClick={closeMenu}>Subscription</Link>
+                <Link href="/subscription" className={linkClass("/subscription")} onClick={closeMenu}>Subscription</Link>
               </>
             )}
 
@@ -126,7 +132,11 @@ export function Navbar() {
                 <p className="text-[9px] font-bold mt-1 opacity-60 uppercase">{user.id.slice(0, 8)}</p>
               </div>
               <button
-                onClick={signOut}
+                type="button"
+                onClick={() => {
+                  closeMenu();
+                  void signOut();
+                }}
                 className="h-12 w-12 flex items-center justify-center rounded-2xl bg-zinc-100 hover:bg-rose-50 hover:text-rose-500 transition-all text-zinc-500"
               >
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -138,7 +148,8 @@ export function Navbar() {
             </div>
           ) : !loading && (
             <Link
-              href="/auth/signup"
+              href="/subscription"
+              onClick={closeMenu}
               className={cx(
                 "flex h-12 items-center justify-center rounded-2xl px-6 text-[10px] font-black uppercase tracking-widest transition-all",
                 scrolled || !isHome
@@ -162,32 +173,32 @@ export function Navbar() {
           <nav className="flex flex-col gap-1">
             {!user && (
               <>
-                <Link href="/" className={linkClass("/")}>Home</Link>
-                <Link href="/charities" className={linkClass("/charities")}>Charities</Link>
-                <Link href="/draw-mechanics" className={linkClass("/draw-mechanics")}>Draw Mechanics</Link>
-                <Link href="/auth/signup" className={linkClass("/auth/signup")}>Subscription</Link>
+                <Link href="/" className={linkClass("/")} onClick={closeMenu}>Home</Link>
+                <Link href="/charities" className={linkClass("/charities")} onClick={closeMenu}>Charities</Link>
+                <Link href="/draw-mechanics" className={linkClass("/draw-mechanics")} onClick={closeMenu}>Draw Mechanics</Link>
+                <Link href="/subscription" className={linkClass("/subscription")} onClick={closeMenu}>Subscription</Link>
               </>
             )}
 
             {user?.role === "subscriber" && (
               <>
-                <Link href="/" className={linkClass("/")}>Home</Link>
-                <Link href="/charities" className={linkClass("/charities")}>Charities</Link>
-                <Link href="/my-scores" className={linkClass("/my-scores")}>My Scores</Link>
-                <Link href="/winnings" className={linkClass("/winnings")}>Winnings</Link>
-                <Link href="/draw-results" className={linkClass("/draw-results")}>Draw Results</Link>
-                <Link href="/dashboard" className={linkClass("/dashboard")}>Dashboard</Link>
+                <Link href="/" className={linkClass("/")} onClick={closeMenu}>Home</Link>
+                <Link href="/charities" className={linkClass("/charities")} onClick={closeMenu}>Charities</Link>
+                <Link href="/my-scores" className={linkClass("/my-scores")} onClick={closeMenu}>My Scores</Link>
+                <Link href="/winnings" className={linkClass("/winnings")} onClick={closeMenu}>Winnings</Link>
+                <Link href="/draw-results" className={linkClass("/draw-results")} onClick={closeMenu}>Draw Results</Link>
+                <Link href="/dashboard" className={linkClass("/dashboard")} onClick={closeMenu}>Dashboard</Link>
               </>
             )}
 
             {user?.role === "admin" && (
               <>
-                <Link href="/" className={linkClass("/")}>Home</Link>
-                <Link href="/admin/charities" className={linkClass("/admin/charities")}>Charities</Link>
-                <Link href="/admin/users" className={linkClass("/admin/users")}>Users</Link>
-                <Link href="/draw-mechanics" className={linkClass("/draw-mechanics")}>Draw Mechanics</Link>
-                <Link href="/admin/verifications" className={linkClass("/admin/verifications")}>Verify</Link>
-                <Link href="/admin" className={linkClass("/admin")}>Dashboard</Link>
+                <Link href="/" className={linkClass("/")} onClick={closeMenu}>Home</Link>
+                <Link href="/admin/charities" className={linkClass("/admin/charities")} onClick={closeMenu}>Charities</Link>
+                <Link href="/admin/users" className={linkClass("/admin/users")} onClick={closeMenu}>Users</Link>
+                <Link href="/draw-mechanics" className={linkClass("/draw-mechanics")} onClick={closeMenu}>Draw Mechanics</Link>
+                <Link href="/admin/verifications" className={linkClass("/admin/verifications")} onClick={closeMenu}>Verify</Link>
+                <Link href="/admin" className={linkClass("/admin")} onClick={closeMenu}>Dashboard</Link>
               </>
             )}
           </nav>

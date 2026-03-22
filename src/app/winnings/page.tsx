@@ -115,44 +115,44 @@ export default function WinningsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] pb-32">
-        <div className="mx-auto max-w-7xl px-8 pt-12">
+    <div className="min-h-screen bg-[#f8f9fa] pb-20 sm:pb-32">
+        <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 sm:pt-10 md:px-8 md:pt-12">
             
             {/* HEADER */}
-            <div className="mb-16">
-                <p className="text-[10px] font-black tracking-[0.3em] text-[#4c49ed] uppercase mb-4">Official Verification</p>
-                <h1 className="text-8xl font-black tracking-tighter leading-none text-zinc-900">
+            <div className="mb-10 sm:mb-14 md:mb-16">
+                <p className="mb-3 text-[10px] font-black uppercase tracking-[0.25em] text-[#4c49ed] sm:mb-4 sm:tracking-[0.3em]">Official Verification</p>
+                <h1 className="text-3xl font-black leading-[1.05] tracking-tighter text-zinc-900 sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl">
                     Winnings & <span className="text-[#4c49ed]">Verification</span>
                 </h1>
-                <p className="mt-6 text-xl font-medium text-zinc-500 max-w-2xl leading-relaxed">
+                <p className="mt-4 max-w-2xl text-base font-medium leading-relaxed text-zinc-500 sm:mt-6 sm:text-lg md:text-xl">
                     Upload proof for any pending winner submissions to initiate the payout process.
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-10">
+            <div className="grid grid-cols-1 gap-6 sm:gap-8 md:gap-10">
                 {submissions.map((sub) => (
-                    <article key={sub.id} className="bg-white rounded-[40px] p-10 shadow-[0_10px_40px_rgba(0,0,0,0.02)] border border-zinc-100 flex flex-col lg:flex-row gap-12 items-start lg:items-center">
+                    <article key={sub.id} className="flex flex-col items-stretch gap-8 rounded-[24px] border border-zinc-100 bg-white p-5 shadow-[0_10px_40px_rgba(0,0,0,0.02)] sm:rounded-[32px] sm:p-8 md:gap-10 md:rounded-[40px] md:p-10 lg:flex-row lg:items-center">
                         
-                        <div className="flex-1 space-y-6">
-                            <div className="flex items-center gap-4">
-                                <div className="px-5 py-2 rounded-full bg-zinc-50 border border-zinc-100 text-[10px] font-black uppercase tracking-widest text-zinc-500">Draw Reference: {sub.drawId.slice(0, 8).toUpperCase()}</div>
-                                <div className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                        <div className="min-w-0 flex-1 space-y-4 sm:space-y-6">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                                <div className="rounded-full border border-zinc-100 bg-zinc-50 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-zinc-500 sm:px-5 sm:py-2 sm:text-[10px]">Draw: {sub.drawId.slice(0, 8).toUpperCase()}</div>
+                                <div className={`rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-widest sm:px-5 sm:py-2 sm:text-[10px] ${
                                     sub.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
                                     sub.status === 'rejected' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
                                     'bg-indigo-50 text-indigo-600 border border-indigo-100'
                                 }`}>Status: {sub.status}</div>
                             </div>
                             
-                            <h2 className="text-4xl font-black tracking-tight text-zinc-900">
+                            <h2 className="text-2xl font-black tracking-tight text-zinc-900 sm:text-3xl md:text-4xl">
                                 {sub.payoutCents ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(sub.payoutCents / 100) : "Reward Pending Calculation"}
                             </h2>
                             
-                            <p className="text-sm font-medium text-zinc-400 max-w-sm">
+                            <p className="max-w-sm text-sm font-medium text-zinc-400">
                                 {sub.adminNotes || "Submit your winning score card or screenshot to verify this claim."}
                             </p>
                         </div>
 
-                        <div className="w-full lg:w-[400px] space-y-4">
+                        <div className="w-full space-y-4 lg:max-w-md lg:shrink-0 xl:w-[400px]">
                             {!sub.proofDataUrl && sub.status === 'pending' ? (
                                 <div className="space-y-4">
                                     <label className="text-[10px] font-black tracking-widest text-zinc-300 uppercase mb-2 block">Proof URL / Data</label>
@@ -192,7 +192,7 @@ export default function WinningsPage() {
                 ))}
 
                 {submissions.length === 0 && (
-                    <div className="rounded-[48px] border-4 border-dashed border-zinc-50 p-24 text-center">
+                    <div className="rounded-[32px] border-4 border-dashed border-zinc-50 p-10 text-center sm:rounded-[40px] sm:p-16 md:rounded-[48px] md:p-24">
                         <svg className="h-20 w-20 text-zinc-100 mx-auto mb-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         <h3 className="text-2xl font-black text-zinc-200 tracking-tight uppercase">No active claims found</h3>
                         <p className="text-sm font-bold text-zinc-200 uppercase tracking-widest mt-4">Keep playing to generate impact and win</p>

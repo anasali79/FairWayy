@@ -16,7 +16,10 @@ export default function CharityManagementPage() {
   const [editForm, setEditForm] = useState<Charity | null>(null);
 
   useEffect(() => {
-    if (!user || user.role !== "admin") return;
+    if (!user || user.role !== "admin") {
+      setFetching(false);
+      return;
+    }
     getCharities()
       .then(setCharities)
       .finally(() => setFetching(false));

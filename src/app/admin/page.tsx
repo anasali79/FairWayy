@@ -14,8 +14,11 @@ export default function AdminDashboard() {
   const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
-    if (!user || user.role !== "admin") return;
-    
+    if (!user || user.role !== "admin") {
+      setFetching(false);
+      return;
+    }
+
     getAdminDashboardSummary()
       .then(setData)
       .finally(() => setFetching(false));
@@ -48,9 +51,9 @@ export default function AdminDashboard() {
 
   const formatAbbreviated = (cents: number) => {
      const value = cents / 100;
-     if (value >= 1000000) return `₹${(value / 1000000).toFixed(1)}M`;
-     if (value >= 1000) return `₹${(value / 1000).toFixed(1)}k`;
-     return `₹${value}`;
+     if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+     if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
+     return `$${value}`;
   };
 
   return (

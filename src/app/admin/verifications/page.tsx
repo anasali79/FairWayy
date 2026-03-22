@@ -19,7 +19,10 @@ export default function WinnerVerificationPage() {
   const selected = submissions.find(s => s.id === selectedId) ?? null;
 
   useEffect(() => {
-    if (!user || user.role !== "admin") return;
+    if (!user || user.role !== "admin") {
+      setFetching(false);
+      return;
+    }
     refresh();
   }, [user]);
 
@@ -66,21 +69,24 @@ export default function WinnerVerificationPage() {
     .filter(s => s.paymentStatus === "paid")
     .reduce((acc, s) => acc + (s.payoutCents ?? 0), 0);
 
+  const formatINR = (cents: number) =>
+    new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(cents / 100);
+
   return (
-    <div className="min-h-screen bg-[#f8f9fa] pb-20 pt-10 font-sans">
-      <div className="mx-auto max-w-[1400px] px-8">
+    <div className="min-h-screen bg-[#f8f9fa] pb-16 pt-6 font-sans sm:pb-20 sm:pt-10">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 md:px-8">
         {/* Header */}
-        <div className="mb-10">
-          <h1 className="text-5xl font-bold tracking-tight text-zinc-900">Winner Verification</h1>
-          <p className="mt-2 text-base text-zinc-500 font-medium max-w-2xl leading-relaxed">
+        <div className="mb-6 sm:mb-10">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl md:text-5xl">Winner Verification</h1>
+          <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-zinc-500 sm:text-base">
             High-precision workflow for score validation and prize disbursement. Ensure transparency across every impact dollar.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr_320px]">
+        <div className="grid grid-cols-1 gap-6 lg:gap-8 xl:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,280px)] 2xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)_minmax(0,320px)]">
           {/* Left Column: Queue */}
-          <div className="space-y-6">
-            <div className="rounded-[24px] bg-white p-6 shadow-[0_4px_25px_rgba(0,0,0,0.03)] border border-zinc-100">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="rounded-[20px] border border-zinc-100 bg-white p-4 shadow-[0_4px_25px_rgba(0,0,0,0.03)] sm:rounded-[24px] sm:p-6">
                <div className="flex items-center justify-between mb-6">
                  <h2 className="text-sm font-black tracking-[0.15em] text-zinc-900 uppercase">Active Queue</h2>
                  <span className="rounded-full bg-indigo-600 px-2.5 py-1 text-[10px] font-black text-white">{submissions.filter(s => s.status === 'pending').length} Pending</span>
@@ -116,7 +122,7 @@ export default function WinnerVerificationPage() {
                </div>
             </div>
 
-            <div className="rounded-[24px] bg-[#e3fdf5] p-6 shadow-[0_4px_25px_rgba(0,0,0,0.03)] border border-emerald-100 flex items-center gap-4">
+            <div className="flex items-center gap-4 rounded-[20px] border border-emerald-100 bg-[#e3fdf5] p-4 shadow-[0_4px_25px_rgba(0,0,0,0.03)] sm:rounded-[24px] sm:p-6">
                 <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
                     <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -124,17 +130,17 @@ export default function WinnerVerificationPage() {
                 </div>
                 <div>
                     <p className="text-[10px] font-black tracking-[0.1em] text-[#006d5c] uppercase">Total Disbursed</p>
-                    <p className="text-2xl font-black text-zinc-900">₹{(totalDisbursed / 100).toLocaleString()}</p>
+                    <p className="text-xl font-black tabular-nums text-zinc-900 sm:text-2xl">{formatINR(totalDisbursed)}</p>
                 </div>
             </div>
           </div>
 
           {/* Center Column: Verification Detail */}
-          <div className="space-y-8">
-            <div className="rounded-[24px] bg-white shadow-[0_8px_40px_rgba(0,0,0,0.04)] border border-zinc-100 overflow-hidden">
-               <div className="p-8 border-b border-zinc-50 flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-zinc-900 tracking-tight">Scorecard Verification</h3>
-                  <div className="flex gap-4 text-zinc-400">
+          <div className="min-w-0 space-y-6 sm:space-y-8">
+            <div className="overflow-hidden rounded-[20px] border border-zinc-100 bg-white shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:rounded-[24px]">
+               <div className="flex flex-col gap-3 border-b border-zinc-50 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6 md:p-8">
+                  <h3 className="text-lg font-bold tracking-tight text-zinc-900 sm:text-xl">Scorecard Verification</h3>
+                  <div className="flex gap-3 text-zinc-400 sm:gap-4">
                     <button className="hover:text-indigo-600 transition-colors">
                         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
                     </button>
@@ -144,9 +150,9 @@ export default function WinnerVerificationPage() {
                   </div>
                </div>
                
-               <div className="aspect-[4/2.5] bg-[#fdfdfd] flex items-center justify-center p-12 overflow-hidden relative group">
+               <div className="relative flex min-h-[200px] items-center justify-center overflow-hidden bg-[#fdfdfd] p-4 sm:aspect-[4/2.8] sm:min-h-0 sm:p-8 md:p-12">
                   {selected?.proofDataUrl ? (
-                    <img src={selected.proofDataUrl} alt="Scorecard Proof" className="max-h-full max-w-full shadow-2xl rounded" />
+                    <img src={selected.proofDataUrl} alt="Scorecard Proof" className="max-h-[min(55vh,420px)] w-full max-w-full rounded object-contain shadow-2xl sm:max-h-[min(50vh,480px)]" />
                   ) : (
                     <div className="text-center">
                         <div className="h-24 w-24 mx-auto bg-zinc-50 rounded-full flex items-center justify-center border border-dashed border-zinc-200">
@@ -157,7 +163,7 @@ export default function WinnerVerificationPage() {
                   )}
                </div>
 
-               <div className="grid grid-cols-3 p-8 border-t border-zinc-50 bg-[#fafafa]/50">
+               <div className="grid grid-cols-1 gap-4 border-t border-zinc-50 bg-[#fafafa]/50 p-4 sm:grid-cols-3 sm:gap-6 sm:p-6 md:p-8">
                   <div>
                     <p className="text-[10px] font-black text-zinc-300 uppercase tracking-widest">Date Played</p>
                     <p className="mt-1 text-sm font-bold text-zinc-900">{selected ? new Date(selected.createdAtISO).toLocaleDateString() : '-'}</p>
@@ -173,15 +179,15 @@ export default function WinnerVerificationPage() {
                </div>
             </div>
 
-            <div className="rounded-[24px] bg-white shadow-[0_8px_40px_rgba(0,0,0,0.04)] border border-zinc-100 overflow-hidden">
-                <div className="p-6 border-b border-zinc-50 flex items-center justify-between">
+            <div className="overflow-hidden rounded-[20px] border border-zinc-100 bg-white shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:rounded-[24px]">
+                <div className="flex items-center justify-between border-b border-zinc-50 p-4 sm:p-6">
                     <h3 className="text-base font-bold text-zinc-900 tracking-tight">Internal Audit Thread</h3>
                     <button className="text-zinc-300 hover:text-zinc-500 transition-colors">
                         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     </button>
                 </div>
                 
-                <div className="p-6 space-y-6 max-h-[300px] overflow-y-auto min-h-[140px]">
+                <div className="min-h-[120px] max-h-[240px] space-y-4 overflow-y-auto p-4 sm:max-h-[300px] sm:space-y-6 sm:p-6 sm:min-h-[140px]">
                     {selected?.adminNotes ? (
                         <div className="flex gap-4">
                             <div className="h-8 w-8 rounded-full bg-zinc-900 flex items-center justify-center text-[10px] text-white font-bold">A</div>
@@ -198,8 +204,8 @@ export default function WinnerVerificationPage() {
                     )}
                 </div>
 
-                <div className="p-6 border-t border-zinc-50 bg-white">
-                    <div className="flex items-center gap-3 rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-2">
+                <div className="border-t border-zinc-50 bg-white p-4 sm:p-6">
+                    <div className="flex items-center gap-2 rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2 sm:gap-3 sm:px-4">
                         <input 
                             value={note}
                             onChange={e => setNote(e.target.value)}
@@ -215,11 +221,11 @@ export default function WinnerVerificationPage() {
           </div>
 
           {/* Right Column: Actons */}
-          <div className="space-y-6">
-            <div className="rounded-[24px] bg-white p-8 shadow-[0_8px_40px_rgba(0,0,0,0.04)] border border-zinc-100 flex flex-col min-h-[400px]">
-                <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-8">Final Action</h3>
+          <div className="space-y-4 sm:space-y-6">
+            <div className="flex min-h-0 flex-col rounded-[20px] border border-zinc-100 bg-white p-5 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:rounded-[24px] sm:p-8 xl:min-h-[360px]">
+                <h3 className="mb-6 text-lg font-bold tracking-tight text-zinc-900 sm:mb-8 sm:text-xl">Final Action</h3>
 
-                <div className="space-y-4 mt-auto">
+                <div className="mt-0 space-y-3 sm:space-y-4 xl:mt-auto">
                     <button 
                         disabled={!selected || saving || selected.status === 'approved'}
                         onClick={() => handleAction('approved', 'paid')}

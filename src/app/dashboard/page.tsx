@@ -104,6 +104,13 @@ export default function DashboardPage() {
 
   const selectedCharity = charities.find((c) => c.id === user.charityId) ?? null;
   const publishedDraws = draws.filter((d) => d.status === "published").sort((a, b) => b.monthISO.localeCompare(a.monthISO));
+  const drawHistoryRows = publishedDraws.slice(0, 5).map((d, idx) => ({
+    id: d.id,
+    name: `Monthly ${d.drawType}-Match`,
+    date: fmtISODate(d.monthISO),
+    pot: `$${(d.jackpotRolloverCents ? Math.round(d.jackpotRolloverCents / 100) : 5000 + idx * 1500).toLocaleString()}`,
+    status: (idx === 0 ? "Entered" : idx === 1 ? "Winner" : "Ended") as "Entered" | "Winner" | "Ended",
+  }));
   const myWinnerRows = drawWinners.filter((w) => w.userId === user.id).length;
   const paidWinnerSubmissions = winnerSubmissions.filter(
     (s) => s.userId === user.id && s.paymentStatus === "paid" && typeof s.payoutCents === "number",
@@ -202,12 +209,12 @@ export default function DashboardPage() {
         </article>
         <article className="rounded-lg border border-zinc-200 bg-white p-6">
           <p className="text-[11px] font-semibold tracking-[0.22em] text-zinc-500">TOTAL WINNINGS</p>
-          <p className="mt-2 text-6xl font-semibold leading-none text-zinc-900">₹{Math.round(totalWonCents / 100)}</p>
+          <p className="mt-2 text-6xl font-semibold leading-none text-zinc-900">{Math.round(totalWonCents / 100)}</p>
           <p className="mt-2 text-sm text-zinc-500">Last win: {lastWinDate ? fmtISODate(lastWinDate.slice(0, 10)) : "N/A"}</p>
         </article>
         <article className="rounded-lg border border-zinc-200 bg-white p-6">
           <p className="text-[11px] font-semibold tracking-[0.22em] text-zinc-500">TOTAL DONATED</p>
-          <p className="mt-2 text-6xl font-semibold leading-none text-teal-700">₹{Math.round(donatedAmount)}</p>
+          <p className="mt-2 text-6xl font-semibold leading-none text-teal-700">${Math.round(donatedAmount)}</p>
           <p className="mt-2 text-sm text-zinc-500">{myWinnerRows} wins verified</p>
         </article>
       </section>
@@ -242,57 +249,96 @@ export default function DashboardPage() {
         </article>
       </section>
 
-      <section className="mt-8 rounded-lg border border-zinc-200 bg-white p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-5xl font-semibold tracking-tight text-zinc-900">Draw History</h2>
-          <button onClick={() => router.push("/winnings")} className="text-base font-semibold text-indigo-600">
+      <section className="mt-8 rounded-lg border border-zinc-200 bg-white p-4 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 sm:text-4xl md:text-5xl">Draw History</h2>
+          <button
+            type="button"
+            onClick={() => router.push("/winnings")}
+            className="shrink-0 text-left text-sm font-semibold text-indigo-600 sm:text-base"
+          >
             View All Records
           </button>
         </div>
-        <div className="mt-6 overflow-hidden rounded-lg border border-zinc-200">
-          <table className="w-full text-left">
-            <thead className="bg-zinc-50 text-[11px] font-semibold tracking-[0.2em] text-zinc-500">
-              <tr>
-                <th className="px-5 py-3">DRAW EVENT</th>
-                <th className="px-5 py-3">ENTRY DATE</th>
-                <th className="px-5 py-3">POT VALUE</th>
-                <th className="px-5 py-3">STATUS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {publishedDraws.slice(0, 5).map((d, idx) => ({
-                id: d.id,
-                name: `Monthly ${d.drawType}-Match`,
-                date: fmtISODate(d.monthISO),
-                pot: `$${(d.jackpotRolloverCents ? Math.round(d.jackpotRolloverCents / 100) : 5000 + idx * 1500).toLocaleString()}`,
-                status: idx === 0 ? "Entered" : idx === 1 ? "Winner" : "Ended",
-              })).map((row) => (
-                <tr key={row.id} className="border-t border-zinc-200 text-lg">
-                  <td className="px-5 py-4 font-medium text-zinc-800">{row.name}</td>
-                  <td className="px-5 py-4 text-zinc-600">{row.date}</td>
-                  <td className="px-5 py-4 font-medium text-zinc-800">{row.pot}</td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={
-                        row.status === "Winner"
-                          ? "rounded-full bg-teal-100 px-3 py-1 text-sm font-semibold text-teal-700"
-                          : row.status === "Entered"
-                            ? "rounded-full bg-indigo-100 px-3 py-1 text-sm font-semibold text-indigo-700"
-                            : "rounded-full bg-zinc-200 px-3 py-1 text-sm font-semibold text-zinc-700"
-                      }
-                    >
-                      {row.status}
-                    </span>
-                  </td>
+
+        {/* Mobile: cards — status always visible */}
+        <div className="mt-4 space-y-3 md:hidden">
+          {drawHistoryRows.length === 0 ? (
+            <p className="rounded-lg border border-zinc-200 bg-zinc-50/50 px-4 py-6 text-center text-sm text-zinc-600">
+              No published draw records yet.
+            </p>
+          ) : (
+            drawHistoryRows.map((row) => (
+              <div
+                key={row.id}
+                className="rounded-xl border border-zinc-200 bg-zinc-50/30 p-4 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-zinc-900">{row.name}</p>
+                    <p className="mt-1 text-sm text-zinc-600">{row.date}</p>
+                    <p className="mt-2 text-sm font-medium text-zinc-800">Pot {row.pot}</p>
+                  </div>
+                  <span
+                    className={
+                      row.status === "Winner"
+                        ? "shrink-0 rounded-full bg-teal-100 px-3 py-1.5 text-xs font-semibold text-teal-700"
+                        : row.status === "Entered"
+                          ? "shrink-0 rounded-full bg-indigo-100 px-3 py-1.5 text-xs font-semibold text-indigo-700"
+                          : "shrink-0 rounded-full bg-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700"
+                    }
+                  >
+                    {row.status}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* md+: table — horizontal scroll so STATUS column is never clipped */}
+        <div className="mt-6 hidden md:block">
+          <div className="overflow-x-auto rounded-lg border border-zinc-200 [-webkit-overflow-scrolling:touch]">
+            <table className="w-full min-w-[640px] text-left text-base">
+              <thead className="bg-zinc-50 text-[11px] font-semibold tracking-[0.2em] text-zinc-500">
+                <tr>
+                  <th className="whitespace-nowrap px-4 py-3 lg:px-5">DRAW EVENT</th>
+                  <th className="whitespace-nowrap px-4 py-3 lg:px-5">ENTRY DATE</th>
+                  <th className="whitespace-nowrap px-4 py-3 lg:px-5">POT VALUE</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-right lg:px-5">STATUS</th>
                 </tr>
-              ))}
-              {publishedDraws.length === 0 ? (
-                <tr className="border-t border-zinc-200 text-lg">
-                  <td className="px-5 py-4 text-zinc-600" colSpan={4}>No published draw records yet.</td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {drawHistoryRows.map((row) => (
+                  <tr key={row.id} className="border-t border-zinc-200">
+                    <td className="px-4 py-4 font-medium text-zinc-800 lg:px-5">{row.name}</td>
+                    <td className="px-4 py-4 text-zinc-600 lg:px-5">{row.date}</td>
+                    <td className="px-4 py-4 font-medium text-zinc-800 lg:px-5">{row.pot}</td>
+                    <td className="px-4 py-4 text-right lg:px-5">
+                      <span
+                        className={
+                          row.status === "Winner"
+                            ? "inline-block rounded-full bg-teal-100 px-3 py-1 text-sm font-semibold text-teal-700"
+                            : row.status === "Entered"
+                              ? "inline-block rounded-full bg-indigo-100 px-3 py-1 text-sm font-semibold text-indigo-700"
+                              : "inline-block rounded-full bg-zinc-200 px-3 py-1 text-sm font-semibold text-zinc-700"
+                        }
+                      >
+                        {row.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {drawHistoryRows.length === 0 ? (
+                  <tr className="border-t border-zinc-200">
+                    <td className="px-4 py-4 text-zinc-600 lg:px-5" colSpan={4}>
+                      No published draw records yet.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </div>

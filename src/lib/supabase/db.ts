@@ -503,7 +503,7 @@ export async function runDrawSupabase(params: {
         : drawNumbersAlgorithmic(params.drawType, allScoresFlat.length > 0 ? allScoresFlat : [1, 2, 3, 4, 5]));
 
   // Step 3: Prize Pool Calculation
-  const pricePerSubCents = 50000; // ₹500
+  const pricePerSubCents = 50000; // $500
   const poolPct = 0.20; // 20%
   const totalPoolCents = activeSubscribers.length * pricePerSubCents * poolPct;
   

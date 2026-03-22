@@ -17,7 +17,7 @@ type AuthContextValue = {
     donationPctExtra: number;
     role?: Role;
   }) => Promise<{ ok: true; userId: string } | { ok: false; error: string }>;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   refresh: () => void;
 };
 
@@ -113,11 +113,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         if (error) return { ok: false as const, error: error.message };
 
-        const userId = data.user?.id;
-        if (!userId) {
-          // If email confirmation is enabled, user may be null here.
+        const userId = data.user?.id ?? null;
+        const hasSession = !!data.session;
+
+        // Email confirmation ON: account is created and email is sent, but there is no session yet.
+        // Client must not run subscription/Stripe inserts (RLS fails → "Signup failed" on the form).
+        if (!hasSession) {
+          if (userId) {
+            try {
+              await updateUserCharityMock({
+                userId,
+                charityId: params.charityId,
+                charityPct: params.charityPct,
+                donationPctExtra: params.donationPctExtra,
+                role: params.role,
+              });
+            } catch {
+              // Often blocked by RLS until email is verified; trigger may still create profile defaults.
+            }
+          }
           await refresh();
           return { ok: true as const, userId: "" };
+        }
+
+        // Confirm-email OFF: we have a session; continue with profile + subscription on signup page.
+        if (!userId) {
+          await refresh();
+          return { ok: false as const, error: "Sign up incomplete. Please try again." };
         }
 
         try {
@@ -134,9 +156,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await refresh();
         return { ok: true as const, userId };
       },
-      signOut: () => {
-        supabase.auth.signOut();
-        refresh();
+      signOut: async () => {
+        await supabase.auth.signOut();
+        await refresh();
       },
       refresh,
     }),

@@ -16,7 +16,8 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     setAuthorized(false);
     if (loading) return;
 
-    const isAdminPath = pathname.startsWith("/admin") || pathname.startsWith("/draw-mechanics");
+    // /draw-mechanics is public (overview for visitors); /admin stays restricted
+    const isAdminPath = pathname.startsWith("/admin");
     const isAuthPath = pathname.startsWith("/auth");
     const isUserPath = ["/dashboard", "/my-scores", "/winnings", "/draw-results"].some(p => pathname.startsWith(p));
 
