@@ -60,7 +60,14 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setSubscription(null);
+      setScores([]);
+      setDraws([]);
+      setDrawWinners([]);
+      setWinnerSubmissions([]);
+      return;
+    }
     (async () => {
       const [sub, userScores, userDraws, userWinners, verifications] = await Promise.all([
         getSubscriptionByUserId(user.id),
@@ -104,13 +111,17 @@ export default function DashboardPage() {
 
   const selectedCharity = charities.find((c) => c.id === user.charityId) ?? null;
   const publishedDraws = draws.filter((d) => d.status === "published").sort((a, b) => b.monthISO.localeCompare(a.monthISO));
-  const drawHistoryRows = publishedDraws.slice(0, 5).map((d, idx) => ({
-    id: d.id,
-    name: `Monthly ${d.drawType}-Match`,
-    date: fmtISODate(d.monthISO),
-    pot: `$${(d.jackpotRolloverCents ? Math.round(d.jackpotRolloverCents / 100) : 5000 + idx * 1500).toLocaleString()}`,
-    status: (idx === 0 ? "Entered" : idx === 1 ? "Winner" : "Ended") as "Entered" | "Winner" | "Ended",
-  }));
+  
+  const drawHistoryRows = publishedDraws.slice(0, 5).map((d, idx) => {
+    const isWinner = drawWinners.some(w => w.drawId === d.id && w.userId === user.id);
+    return {
+      id: d.id,
+      name: `Monthly ${d.drawType}-Match`,
+      date: fmtISODate(d.monthISO),
+      pot: `$${(d.jackpotRolloverCents ? Math.round(d.jackpotRolloverCents / 100) : 5000 + idx * 1500).toLocaleString()}`,
+      status: isWinner ? "Winner" : "Ended",
+    };
+  });
   const myWinnerRows = drawWinners.filter((w) => w.userId === user.id).length;
   const paidWinnerSubmissions = winnerSubmissions.filter(
     (s) => s.userId === user.id && s.paymentStatus === "paid" && typeof s.payoutCents === "number",
@@ -175,7 +186,7 @@ export default function DashboardPage() {
     <div className="mx-auto w-full max-w-6xl px-6 py-10">
       <h1 className="text-6xl font-semibold tracking-tight text-zinc-900">Welcome back, {displayName}.</h1>
       <p className="mt-3 max-w-3xl text-lg text-zinc-600">
-        Your Impact today is supporting the {selectedCharity?.name ?? "Green Fields Initiative"}. You&apos;re currently in the top 5% of monthly contributors.
+        Your Impact today is supporting the {selectedCharity?.name ?? "Green Fields Initiative"}. Thank you for your continued contribution.
       </p>
 
       <section className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -203,9 +214,9 @@ export default function DashboardPage() {
           ) : null}
         </article>
         <article className="rounded-lg border border-zinc-200 bg-white p-6 hover:scale-105 transition-transform duration-300 cursor-pointer" onClick={() => router.push("/draw-results")}>
-          <p className="text-[11px] font-semibold tracking-[0.22em] text-zinc-500">DRAWS ENTERED</p>
-          <p className="mt-2 text-6xl font-semibold leading-none text-indigo-600">{publishedDraws.length}</p>
-          <p className="mt-2 text-sm text-zinc-500">{publishedDraws.length} active entries</p>
+          <p className="text-[11px] font-semibold tracking-[0.22em] text-zinc-500">ACTIVE ENTRIES</p>
+          <p className="mt-2 text-6xl font-semibold leading-none text-indigo-600">{isSubscriptionActive ? 1 : 0}</p>
+          <p className="mt-2 text-sm text-zinc-500">Current cycle</p>
         </article>
         <article className="rounded-lg border border-zinc-200 bg-white p-6">
           <p className="text-[11px] font-semibold tracking-[0.22em] text-zinc-500">TOTAL WINNINGS</p>
@@ -227,13 +238,17 @@ export default function DashboardPage() {
               <p className="mt-2 text-lg text-zinc-600">Your last 5 rounds at Pebble Beach</p>
             </div>
             <span className="rounded-full bg-zinc-100 px-3 py-1 text-sm text-zinc-700">
-              Handicap: {recentScores.length ? (recentScores.reduce((sum, s) => sum + s.stableford, 0) / recentScores.length / 4).toFixed(1) : "8.2"}
+              Handicap: {recentScores.length ? (recentScores.reduce((sum, s) => sum + s.stableford, 0) / recentScores.length / 4).toFixed(1) : "N/A"}
             </span>
           </div>
           <div className="mt-20 grid grid-cols-5 px-10 text-center text-lg text-zinc-700">
-            {(recentScores.length ? recentScores.map((s) => s.stableford).reverse() : [72, 78, 71, 82, 74]).map((score, idx) => (
-              <div key={`${score}-${idx}`}>{score}</div>
-            ))}
+            {recentScores.length > 0 ? (
+              recentScores.map((s) => s.stableford).reverse().map((score, idx) => (
+                <div key={`${score}-${idx}`}>{score}</div>
+              ))
+            ) : (
+              <div className="col-span-5 text-sm text-zinc-400">No score history available yet.</div>
+            )}
           </div>
         </article>
 
