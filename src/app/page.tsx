@@ -66,9 +66,9 @@ export default function Home() {
           <div className="relative group perspective-1000 animate-in fade-in slide-in-from-right duration-1000">
             <div className="overflow-hidden rounded-[28px] border border-white bg-white p-3 shadow-[0_20px_60px_rgba(0,0,0,0.06)] transition-transform duration-700 sm:rounded-[40px] sm:p-4 md:rounded-[48px] md:hover:rotate-2">
               <img
-                src="/hero_golf.png"
+                src="/herooo.png"
                 alt="Premium Golf Course"
-                className="rounded-[40px] w-full object-cover aspect-[4/3] group-hover:scale-105 transition-all duration-1000"
+                className="rounded-[40px] w-full object-cover aspect-[4/3] grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-1000"
               />
             </div>
             {/* Decorative elements */}
