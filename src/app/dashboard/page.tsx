@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import type { Charity, Draw, DrawWinner as DW, ScoreEntry, Subscription, WinnerSubmission } from "@/types/domain";
 import {
@@ -29,9 +29,18 @@ function firstNameFromEmail(email: string) {
 }
 
 export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="mx-auto w-full max-w-3xl px-4 py-10"><div className="text-sm text-zinc-600">Loading...</div></div>}>
+      <DashboardContent />
+    </Suspense>
+  );
+}
+
+function DashboardContent() {
   const router = useRouter();
   const { user, loading, refresh } = useAuth();
 
+  const searchParams = useSearchParams();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [charities, setCharities] = useState<Charity[]>([]);
   const [scores, setScores] = useState<ScoreEntry[]>([]);
@@ -39,12 +48,31 @@ export default function DashboardPage() {
   const [drawWinners, setDrawWinners] = useState<DW[]>([]);
   const [winnerSubmissions, setWinnerSubmissions] = useState<WinnerSubmission[]>([]);
   const [activatingPlan, setActivatingPlan] = useState<"monthly" | "yearly" | null>(null);
+  const [activationError, setActivationError] = useState<string | null>(null);
+  const [checkoutPolling, setCheckoutPolling] = useState(false);
   const stripeMode = process.env.NEXT_PUBLIC_STRIPE_MODE ?? "mock";
 
   const totalCharityPct = useMemo(() => {
     if (!user) return 0;
     return user.charityPct + user.donationPctExtra;
   }, [user]);
+
+  // Fetch all dashboard data
+  const fetchDashboardData = useCallback(async (userId: string) => {
+    const [sub, userScores, userDraws, userWinners, verifications] = await Promise.all([
+      getSubscriptionByUserId(userId),
+      getScoresByUserId(userId),
+      getDraws(),
+      getDrawWinners(),
+      getWinnerSubmissions(),
+    ]);
+    setSubscription(sub);
+    setScores(userScores.sort((a, b) => b.scoreDateISO.localeCompare(a.scoreDateISO)));
+    setDraws(userDraws);
+    setDrawWinners(userWinners);
+    setWinnerSubmissions(verifications);
+    return sub;
+  }, []);
 
   useEffect(() => {
     getCharities()
@@ -58,6 +86,37 @@ export default function DashboardPage() {
     refresh();
   }, []);
 
+  // Poll for subscription activation after Stripe checkout success
+  useEffect(() => {
+    if (searchParams.get("checkout") !== "success" || !user) return;
+    let cancelled = false;
+    setCheckoutPolling(true);
+
+    const poll = async () => {
+      for (let attempt = 0; attempt < 15; attempt++) {
+        if (cancelled) return;
+        try {
+          const sub = await getSubscriptionByUserId(user.id);
+          if (sub && sub.status === "active") {
+            setSubscription(sub);
+            setCheckoutPolling(false);
+            // Clean up URL
+            router.replace("/dashboard", { scroll: false });
+            return;
+          }
+        } catch { /* retry */ }
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      // Final attempt — just load whatever we have
+      setCheckoutPolling(false);
+      await fetchDashboardData(user.id);
+      router.replace("/dashboard", { scroll: false });
+    };
+
+    poll();
+    return () => { cancelled = true; };
+  }, [searchParams, user, router, fetchDashboardData]);
+
   useEffect(() => {
     if (!user) {
       setSubscription(null);
@@ -67,21 +126,8 @@ export default function DashboardPage() {
       setWinnerSubmissions([]);
       return;
     }
-    (async () => {
-      const [sub, userScores, userDraws, userWinners, verifications] = await Promise.all([
-        getSubscriptionByUserId(user.id),
-        getScoresByUserId(user.id),
-        getDraws(),
-        getDrawWinners(),
-        getWinnerSubmissions(),
-      ]);
-      setSubscription(sub);
-      setScores(userScores.sort((a, b) => b.scoreDateISO.localeCompare(a.scoreDateISO)));
-      setDraws(userDraws);
-      setDrawWinners(userWinners);
-      setWinnerSubmissions(verifications);
-    })();
-  }, [user]);
+    fetchDashboardData(user.id).catch(() => {});
+  }, [user, fetchDashboardData]);
 
   if (loading) {
     return (
@@ -137,6 +183,7 @@ export default function DashboardPage() {
   const isSubscriptionActive = subscription?.status === "active";
   const activatePlan = async (plan: "monthly" | "yearly") => {
     setActivatingPlan(plan);
+    setActivationError(null);
     const now = new Date();
     const renewal = new Date(now);
     renewal.setMonth(now.getMonth() + (plan === "monthly" ? 1 : 12));
@@ -177,7 +224,12 @@ export default function DashboardPage() {
         currency: DEFAULT_CURRENCY,
         renewalISODate: renewalISO,
       });
-      setSubscription(await getSubscriptionByUserId(user.id));
+      const updatedSub = await getSubscriptionByUserId(user.id);
+      setSubscription(updatedSub);
+      await refresh();
+    } catch (err) {
+      console.error("Subscription activation failed:", err);
+      setActivationError(err instanceof Error ? err.message : "Failed to activate subscription. Please try again.");
     } finally {
       setActivatingPlan(null);
     }
@@ -193,7 +245,15 @@ export default function DashboardPage() {
       <section className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-4">
         <article className="rounded-lg border border-zinc-200 bg-white p-6">
           <p className="text-[11px] font-semibold tracking-[0.22em] text-zinc-500">SUBSCRIPTION</p>
-          {isSubscriptionActive ? (
+          {checkoutPolling ? (
+            <>
+              <p className="mt-2 text-lg font-medium text-zinc-800">Activating subscription...</p>
+              <p className="mt-2 text-sm text-zinc-500">Please wait while we confirm your payment</p>
+              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
+                <div className="h-full w-1/2 animate-pulse rounded-full bg-indigo-500" />
+              </div>
+            </>
+          ) : isSubscriptionActive ? (
             <>
               <p className="mt-2 text-4xl font-semibold text-zinc-900">• Active</p>
               <p className="mt-2 text-sm text-zinc-500">Renews {fmtISODate(subscription!.renewalISODate)}</p>
@@ -202,6 +262,9 @@ export default function DashboardPage() {
             <>
               <p className="mt-2 text-lg font-medium text-zinc-800">Not Subscribed</p>
               <p className="mt-2 text-sm text-zinc-500">Choose a plan to activate</p>
+              {activationError && (
+                <p className="mt-2 rounded-md bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 border border-rose-100">{activationError}</p>
+              )}
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <button
                   disabled={activatingPlan !== null}
