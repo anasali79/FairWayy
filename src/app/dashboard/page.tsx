@@ -56,7 +56,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -111,7 +110,7 @@ export default function DashboardPage() {
 
   const selectedCharity = charities.find((c) => c.id === user.charityId) ?? null;
   const publishedDraws = draws.filter((d) => d.status === "published").sort((a, b) => b.monthISO.localeCompare(a.monthISO));
-  
+
   const drawHistoryRows = publishedDraws.slice(0, 5).map((d, idx) => {
     const isWinner = drawWinners.some(w => w.drawId === d.id && w.userId === user.id);
     return {
@@ -122,13 +121,15 @@ export default function DashboardPage() {
       status: isWinner ? "Winner" : "Ended",
     };
   });
-  const myWinnerRows = drawWinners.filter((w) => w.userId === user.id).length;
-  const paidWinnerSubmissions = winnerSubmissions.filter(
-    (s) => s.userId === user.id && s.paymentStatus === "paid" && typeof s.payoutCents === "number",
-  );
-  const totalWonCents = paidWinnerSubmissions.reduce((sum, s) => sum + (s.payoutCents ?? 0), 0);
+  const myWinners = drawWinners.filter((w) => w.userId === user.id);
+  const myWinnerRows = myWinners.length;
+
+  const totalWonCents = myWinners.reduce((sum, w) => sum + (w.prizeAmountCents ?? 0), 0);
+  const wonDrawIds = new Set(myWinners.map((w) => w.drawId));
+  const myWonDraws = draws.filter((d) => wonDrawIds.has(d.id)).sort((a, b) => b.monthISO.localeCompare(a.monthISO));
+  const lastWinDate = myWonDraws[0]?.monthISO;
+
   const recentScores = scores.slice(0, 5);
-  const lastWinDate = paidWinnerSubmissions[0]?.createdAtISO;
   const monthlyGoal = 100;
   const donatedAmount = Math.round((subscription?.priceCents ?? 0) * (totalCharityPct / 100)) / 100;
   const impactPct = Math.min(100, Math.round((donatedAmount / monthlyGoal) * 100));
@@ -220,8 +221,8 @@ export default function DashboardPage() {
         </article>
         <article className="rounded-lg border border-zinc-200 bg-white p-6">
           <p className="text-[11px] font-semibold tracking-[0.22em] text-zinc-500">TOTAL WINNINGS</p>
-          <p className="mt-2 text-6xl font-semibold leading-none text-zinc-900">{Math.round(totalWonCents / 100)}</p>
-          <p className="mt-2 text-sm text-zinc-500">Last win: {lastWinDate ? fmtISODate(lastWinDate.slice(0, 10)) : "N/A"}</p>
+          <p className="mt-2 text-6xl font-semibold leading-none text-zinc-900">${Math.round(totalWonCents / 100).toLocaleString()}</p>
+          <p className="mt-2 text-sm text-zinc-500">Last win: {lastWinDate ? fmtISODate(lastWinDate) : "N/A"}</p>
         </article>
         <article className="rounded-lg border border-zinc-200 bg-white p-6">
           <p className="text-[11px] font-semibold tracking-[0.22em] text-zinc-500">TOTAL DONATED</p>

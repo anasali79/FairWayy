@@ -12,7 +12,8 @@ export default function WinningsPage() {
 
   const [submissions, setSubmissions] = useState<WinnerSubmission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
   const [proofUrl, setProofUrl] = useState("");
 
   useEffect(() => {
@@ -89,7 +90,7 @@ export default function WinningsPage() {
 
   const handleUploadProof = async (sub: WinnerSubmission) => {
     if (!proofUrl) return;
-    setUploadingId(sub.id);
+    setIsSubmitting(true);
     try {
         await upsertWinnerSubmission({
             drawId: sub.drawId,
@@ -98,11 +99,12 @@ export default function WinningsPage() {
             proofDataUrl: proofUrl,
         });
         setProofUrl("");
-        setUploadingId(null);
+        setSelectedSubId(null);
         await fetchWinnings();
     } catch (e) {
         console.error(e);
-        setUploadingId(null);
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -116,91 +118,110 @@ export default function WinningsPage() {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] pb-20 sm:pb-32">
-        <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 sm:pt-10 md:px-8 md:pt-12">
-            
-            {/* HEADER */}
-            <div className="mb-10 sm:mb-14 md:mb-16">
-                <p className="mb-3 text-[10px] font-black uppercase tracking-[0.25em] text-[#4c49ed] sm:mb-4 sm:tracking-[0.3em]">Official Verification</p>
-                <h1 className="text-3xl font-black leading-[1.05] tracking-tighter text-zinc-900 sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl">
-                    Winnings & <span className="text-[#4c49ed]">Verification</span>
-                </h1>
-                <p className="mt-4 max-w-2xl text-base font-medium leading-relaxed text-zinc-500 sm:mt-6 sm:text-lg md:text-xl">
-                    Upload proof for any pending winner submissions to initiate the payout process.
-                </p>
-            </div>
+      <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 sm:pt-10 md:px-8 md:pt-12">
 
-            <div className="grid grid-cols-1 gap-6 sm:gap-8 md:gap-10">
-                {submissions.map((sub) => (
-                    <article key={sub.id} className="flex flex-col items-stretch gap-8 rounded-[24px] border border-zinc-100 bg-white p-5 shadow-[0_10px_40px_rgba(0,0,0,0.02)] sm:rounded-[32px] sm:p-8 md:gap-10 md:rounded-[40px] md:p-10 lg:flex-row lg:items-center">
-                        
-                        <div className="min-w-0 flex-1 space-y-4 sm:space-y-6">
-                            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-                                <div className="rounded-full border border-zinc-100 bg-zinc-50 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-zinc-500 sm:px-5 sm:py-2 sm:text-[10px]">Draw: {sub.drawId.slice(0, 8).toUpperCase()}</div>
+        {/* HEADER */}
+        <div className="mb-10 sm:mb-14 md:mb-16">
+          <p className="mb-3 text-[10px] font-black uppercase tracking-[0.25em] text-[#4c49ed] sm:mb-4 sm:tracking-[0.3em]">Official Verification</p>
+          <h1 className="text-3xl font-black leading-[1.05] tracking-tighter text-zinc-900 sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl">
+            Winnings & <span className="text-[#4c49ed]">Verification</span>
+          </h1>
+          <p className="mt-4 max-w-2xl text-base font-medium leading-relaxed text-zinc-500 sm:mt-6 sm:text-lg md:text-xl">
+            Upload proof for any pending winner submissions to initiate the payout process.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 sm:gap-8 md:gap-10">
+          {submissions.map((sub) => (
+            <article key={sub.id} className="flex flex-col items-stretch gap-8 rounded-[24px] border border-zinc-100 bg-white p-5 shadow-[0_10px_40px_rgba(0,0,0,0.02)] sm:rounded-[32px] sm:p-8 md:gap-10 md:rounded-[40px] md:p-10 lg:flex-row lg:items-center">
+
+              <div className="min-w-0 flex-1 space-y-4 sm:space-y-6">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                  <div className="rounded-full border border-zinc-100 bg-zinc-50 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-zinc-500 sm:px-5 sm:py-2 sm:text-[10px]">Draw: {sub.drawId.slice(0, 8).toUpperCase()}</div>
                                 <div className={`rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-widest sm:px-5 sm:py-2 sm:text-[10px] ${
                                     sub.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
                                     sub.status === 'rejected' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
                                     'bg-indigo-50 text-indigo-600 border border-indigo-100'
-                                }`}>Status: {sub.status}</div>
+                                }`}>Review Status: {sub.status}</div>
+                                <div className={`rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-widest sm:px-5 sm:py-2 sm:text-[10px] ${
+                                    sub.paymentStatus === 'paid' ? 'bg-emerald-500 text-white border border-emerald-600' :
+                                    'bg-amber-50 text-amber-600 border border-amber-100'
+                                }`}>Payout: {sub.paymentStatus}</div>
                             </div>
-                            
-                            <h2 className="text-2xl font-black tracking-tight text-zinc-900 sm:text-3xl md:text-4xl">
-                                {sub.payoutCents ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(sub.payoutCents / 100) : "Reward Pending Calculation"}
-                            </h2>
-                            
-                            <p className="max-w-sm text-sm font-medium text-zinc-400">
-                                {sub.adminNotes || "Submit your winning score card or screenshot to verify this claim."}
-                            </p>
-                        </div>
 
-                        <div className="w-full space-y-4 lg:max-w-md lg:shrink-0 xl:w-[400px]">
-                            {!sub.proofDataUrl && sub.status === 'pending' ? (
+                <h2 className="text-2xl font-black tracking-tight text-zinc-900 sm:text-3xl md:text-4xl">
+                  {sub.payoutCents ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(sub.payoutCents / 100) : "Reward Pending Calculation"}
+                </h2>
+
+                <p className="max-w-sm text-sm font-medium text-zinc-400">
+                  {sub.adminNotes || "Submit your winning score card or screenshot to verify this claim."}
+                </p>
+              </div>
+
+              <div className="w-full space-y-4 lg:max-w-md lg:shrink-0 xl:w-[400px]">
+                {!sub.proofDataUrl && sub.status === 'pending' ? (
                                 <div className="space-y-4">
-                                    <label className="text-[10px] font-black tracking-widest text-zinc-300 uppercase mb-2 block">Proof URL / Data</label>
+                                    <label className="text-[10px] font-black tracking-widest text-zinc-300 uppercase mb-2 block">Upload Proof Image</label>
                                     <input 
-                                        type="text"
-                                        placeholder="https://imgur.com/your-proof"
-                                        value={uploadingId === sub.id ? proofUrl : (uploadingId === null ? proofUrl : '')}
-                                        onChange={(e) => setProofUrl(e.target.value)}
-                                        className="w-full rounded-2xl bg-zinc-50 border border-zinc-100 p-5 text-sm font-bold focus:ring-2 ring-indigo-100 outline-none transition-all"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                setSelectedSubId(sub.id);
+                                                const reader = new FileReader();
+                                                reader.onload = () => setProofUrl(reader.result as string);
+                                                reader.readAsDataURL(file);
+                                            } else if (selectedSubId === sub.id) {
+                                                setProofUrl("");
+                                                setSelectedSubId(null);
+                                            }
+                                        }}
+                                        className="w-full text-zinc-500 rounded-2xl bg-zinc-50 border border-zinc-100 p-4 text-sm font-bold focus:ring-2 ring-indigo-100 outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:uppercase file:tracking-widest file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 cursor-pointer"
                                     />
+                                    {selectedSubId === sub.id && proofUrl && proofUrl.startsWith("data:image") && (
+                                        <div className="mt-3 relative h-32 w-full rounded-xl overflow-hidden border border-zinc-200">
+                                            <img src={proofUrl} alt="Proof preview" className="object-cover w-full h-full" />
+                                        </div>
+                                    )}
                                     <button 
                                         onClick={() => handleUploadProof(sub)}
-                                        disabled={uploadingId !== null}
+                                        disabled={isSubmitting || selectedSubId !== sub.id || !proofUrl}
                                         className="w-full bg-[#4c49ed] text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
                                     >
-                                        {uploadingId === sub.id ? "Uploading..." : "Submit Proof"}
+                                        {isSubmitting && selectedSubId === sub.id ? "Uploading..." : "Submit Proof"}
                                     </button>
                                 </div>
-                            ) : sub.proofDataUrl ? (
-                                <div className="rounded-3xl bg-indigo-50/50 p-6 border border-indigo-100 flex items-center gap-4">
-                                     <div className="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
-                                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M5 13l4 4L19 7" /></svg>
-                                     </div>
-                                     <div>
-                                        <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Proof Submitted</p>
-                                        <p className="text-[9px] font-bold text-indigo-400 truncate max-w-[200px] mt-1">{sub.proofDataUrl}</p>
-                                     </div>
-                                </div>
-                            ) : (
-                                <div className="rounded-3xl bg-zinc-50 p-6 flex items-center gap-4 opacity-50 grayscale">
-                                     <div className="h-10 w-10 bg-zinc-200 rounded-xl" />
-                                     <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Verification Required</p>
-                                </div>
-                            )}
-                        </div>
-                    </article>
-                ))}
-
-                {submissions.length === 0 && (
-                    <div className="rounded-[32px] border-4 border-dashed border-zinc-50 p-10 text-center sm:rounded-[40px] sm:p-16 md:rounded-[48px] md:p-24">
-                        <svg className="h-20 w-20 text-zinc-100 mx-auto mb-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <h3 className="text-2xl font-black text-zinc-200 tracking-tight uppercase">No active claims found</h3>
-                        <p className="text-sm font-bold text-zinc-200 uppercase tracking-widest mt-4">Keep playing to generate impact and win</p>
+                ) : sub.proofDataUrl ? (
+                  <div className="rounded-3xl bg-indigo-50/50 p-6 border border-indigo-100 flex items-center gap-4">
+                    <div className="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M5 13l4 4L19 7" /></svg>
                     </div>
+                    <div>
+                      <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Proof Submitted</p>
+                      <p className="text-[9px] font-bold text-indigo-400 truncate max-w-[200px] mt-1">{sub.proofDataUrl}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-3xl bg-zinc-50 p-6 flex items-center gap-4 opacity-50 grayscale">
+                    <div className="h-10 w-10 bg-zinc-200 rounded-xl" />
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Verification Required</p>
+                  </div>
                 )}
-            </div>
+              </div>
+            </article>
+          ))}
 
+          {submissions.length === 0 && (
+            <div className="rounded-[32px] border-4 border-dashed border-zinc-50 p-10 text-center sm:rounded-[40px] sm:p-16 md:rounded-[48px] md:p-24">
+              <svg className="h-20 w-20 text-zinc-100 mx-auto mb-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <h3 className="text-2xl font-black text-zinc-200 tracking-tight uppercase">No active claims found</h3>
+              <p className="text-sm font-bold text-zinc-200 uppercase tracking-widest mt-4">Keep playing to generate impact and win</p>
+            </div>
+          )}
         </div>
+
+      </div>
     </div>
   );
 }

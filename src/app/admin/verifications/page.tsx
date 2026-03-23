@@ -49,6 +49,8 @@ export default function WinnerVerificationPage() {
         status,
         paymentStatus,
         adminNotes: note || selected.adminNotes,
+        payoutCents: selected.payoutCents,
+        proofDataUrl: selected.proofDataUrl,
       });
       await refresh();
       setNote("");
@@ -108,12 +110,21 @@ export default function WinnerVerificationPage() {
                         >
                             <div className="flex items-center justify-between mb-2">
                                 <p className="text-sm font-bold text-zinc-900">User: {s.userId.slice(0, 8)}</p>
-                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter ${
-                                    s.status === 'pending' ? 'bg-amber-100 text-amber-700' : 
-                                    s.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-                                }`}>
-                                    {s.status === 'pending' ? 'Review' : s.status}
-                                </span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter ${
+                                        s.status === 'pending' ? 'bg-amber-100 text-amber-700' : 
+                                        s.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                                    }`}>
+                                        {s.status === 'pending' ? 'Review' : s.status}
+                                    </span>
+                                    {s.status === 'approved' && (
+                                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter ${
+                                            s.paymentStatus === 'paid' ? 'bg-emerald-500 text-white' : 'bg-zinc-100 text-zinc-500'
+                                        }`}>
+                                            {s.paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                             <p className="text-[10px] font-medium text-zinc-500">ID: {s.id.slice(0, 10)}</p>
                         </button>
@@ -223,25 +234,32 @@ export default function WinnerVerificationPage() {
           {/* Right Column: Actons */}
           <div className="space-y-4 sm:space-y-6">
             <div className="flex min-h-0 flex-col rounded-[20px] border border-zinc-100 bg-white p-5 shadow-[0_8px_40px_rgba(0,0,0,0.04)] sm:rounded-[24px] sm:p-8 xl:min-h-[360px]">
-                <h3 className="mb-6 text-lg font-bold tracking-tight text-zinc-900 sm:mb-8 sm:text-xl">Final Action</h3>
+                <div className="flex items-center justify-between mb-6 sm:mb-8">
+                    <h3 className="text-lg font-bold tracking-tight text-zinc-900 sm:text-xl">Final Action</h3>
+                    {selected && selected.paymentStatus === 'paid' && (
+                        <span className="rounded-full bg-emerald-500 px-3 py-1 text-[10px] font-black text-white uppercase tracking-widest shadow-sm">
+                            Funds Sent
+                        </span>
+                    )}
+                </div>
 
                 <div className="mt-0 space-y-3 sm:space-y-4 xl:mt-auto">
                     <button 
                         disabled={!selected || saving || selected.status === 'approved'}
-                        onClick={() => handleAction('approved', 'paid')}
-                        className="w-full rounded-xl bg-[#006d5c] py-4 text-xs font-bold text-white shadow-[0_4px_12px_rgba(0,109,92,0.2)] hover:bg-[#005a4d] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        onClick={() => handleAction('approved', selected?.paymentStatus || 'pending')}
+                        className="w-full rounded-xl bg-[#4c49ed] py-4 text-xs font-bold text-white shadow-[0_4px_12px_rgba(76,73,237,0.2)] hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M5 13l4 4L19 7" /></svg>
-                        Approve & Disburse
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Approve Claim
                     </button>
 
                     <button 
-                        disabled={!selected || saving || selected.paymentStatus === 'paid'}
+                        disabled={!selected || saving || selected.status !== 'approved' || selected.paymentStatus === 'paid'}
                         onClick={() => handleAction('approved', 'paid')}
-                        className="w-full rounded-xl bg-white border border-zinc-100 py-4 text-xs font-bold text-zinc-900 shadow-sm hover:bg-zinc-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="w-full rounded-xl bg-[#006d5c] py-4 text-xs font-bold text-white shadow-sm hover:bg-[#005a4d] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                        Mark as Paid
+                        Process Payout (Mark Paid)
                     </button>
 
                     <div className="pt-4 border-t border-zinc-50 flex items-center gap-3">

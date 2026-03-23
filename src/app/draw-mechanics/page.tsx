@@ -342,7 +342,7 @@ export default function DrawMechanicsPage() {
                             winningNumbers,
                             priceCentsForPoolCalculation: PLAN_PRICES_CENTS.monthly,
                         });
-                        router.push("/dashboard");
+                        router.push("/admin");
                     } catch (e) {
                       setError(e instanceof Error ? e.message : "Publish failed.");
                     } finally {

@@ -127,7 +127,7 @@ export function Navbar() {
                 scrolled || !isHome ? "text-zinc-900" : "text-zinc-400"
               )}>
                 <p className="text-[10px] font-black uppercase tracking-widest leading-none">
-                  {user.role === "admin" ? "Admin" : "Member"} Active
+                  {user.role === "admin" ? "Admin" : "Member"}
                 </p>
                 <p className="text-[9px] font-bold mt-1 opacity-60 uppercase">{user.id.slice(0, 8)}</p>
               </div>

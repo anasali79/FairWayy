@@ -3,11 +3,11 @@
 import Link from "next/link";
 
 const footerLinks = [
-  { href: "/about", label: "ABOUT US" },
-  { href: "/contact", label: "CONTACT" },
-  { href: "/privacy", label: "PRIVACY" },
-  { href: "/terms", label: "TERMS" },
-  { href: "/charities", label: "CHARITY PARTNERS" },
+  { href: "#", label: "ABOUT US" },
+  { href: "#", label: "CONTACT" },
+  { href: "#", label: "PRIVACY" },
+  { href: "#", label: "TERMS" },
+  { href: "#", label: "CHARITY PARTNERS" },
 ];
 
 export function SiteFooter() {
