@@ -49,7 +49,6 @@ function DashboardContent() {
   const [winnerSubmissions, setWinnerSubmissions] = useState<WinnerSubmission[]>([]);
   const [activatingPlan, setActivatingPlan] = useState<"monthly" | "yearly" | null>(null);
   const [activationError, setActivationError] = useState<string | null>(null);
-  const [checkoutPolling, setCheckoutPolling] = useState(false);
   const stripeMode = process.env.NEXT_PUBLIC_STRIPE_MODE ?? "mock";
 
   const totalCharityPct = useMemo(() => {
@@ -86,36 +85,41 @@ function DashboardContent() {
     refresh();
   }, []);
 
-  // Poll for subscription activation after Stripe checkout success
+  // Verify and activate subscription after Stripe checkout success
   useEffect(() => {
     if (searchParams.get("checkout") !== "success" || !user) return;
     let cancelled = false;
-    setCheckoutPolling(true);
 
-    const poll = async () => {
-      for (let attempt = 0; attempt < 15; attempt++) {
-        if (cancelled) return;
-        try {
+    const verifyCheckout = async () => {
+      try {
+        const resp = await fetch("/api/stripe/verify-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: user.id }),
+        });
+        const data = await resp.json();
+        if (!cancelled && data.subscription && data.status === "active") {
+          setSubscription(data.subscription);
+        } else if (!cancelled) {
+          // Refetch from DB as fallback
           const sub = await getSubscriptionByUserId(user.id);
-          if (sub && sub.status === "active") {
-            setSubscription(sub);
-            setCheckoutPolling(false);
-            // Clean up URL
-            router.replace("/dashboard", { scroll: false });
-            return;
-          }
-        } catch { /* retry */ }
-        await new Promise((r) => setTimeout(r, 2000));
+          setSubscription(sub);
+        }
+      } catch {
+        // Fallback: just refetch
+        if (!cancelled) {
+          const sub = await getSubscriptionByUserId(user.id);
+          setSubscription(sub);
+        }
       }
-      // Final attempt — just load whatever we have
-      setCheckoutPolling(false);
-      await fetchDashboardData(user.id);
-      router.replace("/dashboard", { scroll: false });
+      if (!cancelled) {
+        router.replace("/dashboard", { scroll: false });
+      }
     };
 
-    poll();
+    verifyCheckout();
     return () => { cancelled = true; };
-  }, [searchParams, user, router, fetchDashboardData]);
+  }, [searchParams, user, router]);
 
   useEffect(() => {
     if (!user) {
@@ -245,15 +249,7 @@ function DashboardContent() {
       <section className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-4">
         <article className="rounded-lg border border-zinc-200 bg-white p-6">
           <p className="text-[11px] font-semibold tracking-[0.22em] text-zinc-500">SUBSCRIPTION</p>
-          {checkoutPolling ? (
-            <>
-              <p className="mt-2 text-lg font-medium text-zinc-800">Activating subscription...</p>
-              <p className="mt-2 text-sm text-zinc-500">Please wait while we confirm your payment</p>
-              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
-                <div className="h-full w-1/2 animate-pulse rounded-full bg-indigo-500" />
-              </div>
-            </>
-          ) : isSubscriptionActive ? (
+          {isSubscriptionActive ? (
             <>
               <p className="mt-2 text-4xl font-semibold text-zinc-900">• Active</p>
               <p className="mt-2 text-sm text-zinc-500">Renews {fmtISODate(subscription!.renewalISODate)}</p>
