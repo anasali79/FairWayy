@@ -10,7 +10,7 @@ export default function Home() {
   const [featuredCharity, setFeaturedCharity] = useState<Charity | null>(null);
 
   useEffect(() => {
-    (async () => {
+    const fetchData = async () => {
       try {
         const pool = await getLivePrizePoolEstimation();
         setPrizePool(pool);
@@ -18,9 +18,16 @@ export default function Home() {
         const featured = charities.find(c => c.featured) || charities[0];
         setFeaturedCharity(featured);
       } catch (e) {
-        setPrizePool(124800000); // fallback
+        setPrizePool(prev => prev || 124800000); // fallback
       }
-    })();
+    };
+
+    fetchData();
+    const interval = setInterval(() => {
+      getLivePrizePoolEstimation().then(setPrizePool).catch(() => {});
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const formatCurrency = (cents: number) => {

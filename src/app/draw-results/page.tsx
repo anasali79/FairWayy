@@ -216,10 +216,12 @@ export default function DrawResultsPage() {
                             View Impact Partners <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                         </Link>
                       </div>
-                      {/* Image Placeholder — hidden on small screens to avoid overlap */}
-                      <div className="pointer-events-none absolute bottom-0 right-0 top-0 hidden w-[38%] items-center justify-center rounded-l-[48px] bg-zinc-100 lg:flex xl:w-[40%] xl:rounded-l-[80px]">
-                            <svg className="h-16 w-16 text-zinc-200 xl:h-20 xl:w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                      </div>
+                      {/* Impact Image */}
+                      <img 
+                          src="/final last.jpg" 
+                          alt="Charity Impact"
+                          className="pointer-events-none absolute bottom-0 right-0 top-0 hidden h-full w-[38%] object-cover rounded-l-[48px] lg:block xl:w-[40%] xl:rounded-l-[80px]"
+                      />
                       
                       {/* Impact tag — static on mobile, absolute on xl+ */}
                       <div className="relative z-20 mt-8 rounded-2xl border border-zinc-50 bg-white p-5 shadow-xl sm:mt-10 sm:rounded-3xl sm:p-6 md:p-8 xl:absolute xl:bottom-10 xl:right-10 xl:mt-0 xl:max-w-[240px] xl:rounded-[32px] 2xl:right-24 2xl:bottom-12">
