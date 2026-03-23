@@ -193,26 +193,33 @@ export default function DashboardPage() {
       <section className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-4">
         <article className="rounded-lg border border-zinc-200 bg-white p-6">
           <p className="text-[11px] font-semibold tracking-[0.22em] text-zinc-500">SUBSCRIPTION</p>
-          <p className="mt-2 text-4xl font-semibold text-zinc-900">• {subscription?.status ? subscription.status[0].toUpperCase() + subscription.status.slice(1) : "Inactive"}</p>
-          <p className="mt-2 text-sm text-zinc-500">Renews {subscription ? fmtISODate(subscription.renewalISODate) : "N/A"}</p>
-          {!isSubscriptionActive ? (
-            <div className="mt-4 flex gap-2">
-              <button
-                disabled={activatingPlan !== null}
-                onClick={() => activatePlan("monthly")}
-                className="rounded-lg bg-zinc-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
-              >
-                {activatingPlan === "monthly" ? "Activating..." : "Activate Monthly"}
-              </button>
-              <button
-                disabled={activatingPlan !== null}
-                onClick={() => activatePlan("yearly")}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 disabled:opacity-60"
-              >
-                {activatingPlan === "yearly" ? "Activating..." : "Activate Yearly"}
-              </button>
-            </div>
-          ) : null}
+          {isSubscriptionActive ? (
+            <>
+              <p className="mt-2 text-4xl font-semibold text-zinc-900">• Active</p>
+              <p className="mt-2 text-sm text-zinc-500">Renews {fmtISODate(subscription!.renewalISODate)}</p>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-lg font-medium text-zinc-800">Not Subscribed</p>
+              <p className="mt-2 text-sm text-zinc-500">Choose a plan to activate</p>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <button
+                  disabled={activatingPlan !== null}
+                  onClick={() => activatePlan("monthly")}
+                  className="rounded-lg bg-zinc-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
+                >
+                  {activatingPlan === "monthly" ? "Activating..." : "Activate Monthly"}
+                </button>
+                <button
+                  disabled={activatingPlan !== null}
+                  onClick={() => activatePlan("yearly")}
+                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 disabled:opacity-60"
+                >
+                  {activatingPlan === "yearly" ? "Activating..." : "Activate Yearly"}
+                </button>
+              </div>
+            </>
+          )}
         </article>
         <article className="rounded-lg border border-zinc-200 bg-white p-6 hover:scale-105 transition-transform duration-300 cursor-pointer" onClick={() => router.push("/draw-results")}>
           <p className="text-[11px] font-semibold tracking-[0.22em] text-zinc-500">ACTIVE ENTRIES</p>
